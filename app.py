@@ -95,15 +95,17 @@ def notify_failure(container, time):
     if "failure_notify_timeout" in labels.keys():
         send_timeout = int(labels['failure_notify_timeout'])
     if not latest_send or (time - latest_send.send_time).seconds / 60 > send_timeout:
-        address = config.default_receiver_address
+        default_address = config.default_receiver_address
+        addresses = [default_address]
         if 'failure_notify_email' in labels.keys():
-            address = labels['failure_notify_email']
-        send_email(Email(
-            address=address,
-            container_name=container.name,
-            failure_time=failure_time,
-            healthcheck_response=healthcheck_response
-        ))
+            addresses = labels['failure_notify_email'].split(',')
+        for address in addresses:
+            send_email(Email(
+                address=address,
+                container_name=container.name,
+                failure_time=failure_time,
+                healthcheck_response=healthcheck_response
+            ))
 
 
 def restart_container(container):
