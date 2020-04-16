@@ -8,6 +8,7 @@ from docker import DockerClient
 
 import dateutil.parser as parser
 
+from send_mail import get_mail_server
 from utils import log, LogLevel
 import config
 
@@ -36,13 +37,8 @@ DOCKER_BASE_URL={config.docker_base_url}
 
 docker_client = DockerClient(base_url=config.docker_base_url)
 docker_client.ping()
-if config.email_use_ssl:
-    email_server = smtplib.SMTP_SSL(config.email_host, config.email_port)
-else:
-    email_server = smtplib.SMTP(config.email_host, config.email_port)
 
-if config.email_login:
-    email_server.login(config.email_login, config.email_password)
+email_server = get_mail_server()
 
 SendedEmail = namedtuple("SendedEmail", ["send_time", "container_name", "email", "message", "result", "response"])
 Email = namedtuple("Email", ["address", "container_name", "failure_time", "healthcheck_response"])
