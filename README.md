@@ -10,6 +10,10 @@ Available on dockerhub:  `limebeck/docker-autoheal`
 
 Don't forget to add volume with docker socket. Usually like this: `-v /var/run/docker.sock:/var/run/docker.sock`
 
+## Test email
+
+To send test email run `./test_mail.py your@mail.com`
+
 ## Configuration
 * DEFAULT_SEND_TIMEOUT_MIN - default send timeout for every container, minutes (default - 15)
 * DEFAULT_RECEIVER_ADDRESS - default notification receiver email
