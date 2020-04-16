@@ -117,7 +117,6 @@ def process_container(container):
     failure_time = container.attrs["State"]["Health"]["Log"][-1]["End"]
     labels = container.attrs["Config"]["Labels"]
     try:
-        # parsed_time = parser.isoparse(failure_time, "%Y-%m-%dT%H:%M:%S.$f%z")
         parsed_time = parser.isoparse(failure_time)
         if (now - parsed_time).seconds > config.container_debounce_time:
             restart_container(container)

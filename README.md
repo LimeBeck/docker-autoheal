@@ -10,6 +10,14 @@ Available on dockerhub:  `limebeck/docker-autoheal`
 
 Don't forget to add volume with docker socket. Usually like this: `-v /var/run/docker.sock:/var/run/docker.sock`
 
+Add to your containers labels:
+
+- Autoheal label (default - autoheal, but you can provide own)
+- `failure_notify=true/false` - enable/disable notifications on container
+- `failure_notify_email=your@mail.com` - specify email for container
+- `failure_notify_timeout=n` - period between notifications, minutes
+
+
 ## Test email
 
 To send test email run `./test_mail.py your@mail.com`
