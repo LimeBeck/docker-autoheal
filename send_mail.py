@@ -3,7 +3,7 @@ import config
 
 
 def get_mail_server():
-    if config.email_use_ssl:
+    if bool(config.email_use_ssl):
         email_server = smtplib.SMTP_SSL(config.email_host, config.email_port)
     else:
         email_server = smtplib.SMTP(config.email_host, config.email_port)

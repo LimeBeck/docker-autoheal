@@ -1,3 +1,4 @@
+import distutils
 import os
 from datetime import datetime
 from enum import Enum
@@ -25,3 +26,10 @@ def get_required_env(name):
     if param is None:
         raise MissingParameterException(f"<8922e16> {name} is required parameter")
     return param
+
+def to_bool(value) -> bool:
+    if value is bool:
+        return value
+    if value is str:
+        return distutils.util.strtobool(value)
+    raise ValueError("<c8f3984b> Value must by string or bool")
