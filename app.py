@@ -3,17 +3,21 @@ from datetime import datetime, timezone
 import smtplib
 from email.message import EmailMessage
 from collections import namedtuple
+from typing import List
 
 from docker import DockerClient
 
 import dateutil.parser as parser
+from docker.models.containers import Container
 
 from send_mail import get_mail_server
 from utils import log, LogLevel
 import config
 
-unhealth_containers = []
-sended_emails = []
+SendedEmail = namedtuple("SendedEmail", ["send_time", "container_name", "email", "message", "result", "response"])
+Email = namedtuple("Email", ["address", "container_name", "failure_time", "healthcheck_response"])
+unhealth_containers: List[Container] = []
+sended_emails: List[SendedEmail] = []
 
 log(f"""Start with configuration:
 DEFAULT_SEND_TIMEOUT_MIN={config.default_send_timeout_min}
@@ -33,15 +37,12 @@ AUTOHEAL_DEBOUNCE_TIME={config.container_debounce_time}
 CLEAN_PERIOD={config.clean_period}
 DOCKER_BASE_URL={config.docker_base_url}
 """.rstrip()
-)
+    )
 
 docker_client = DockerClient(base_url=config.docker_base_url)
 docker_client.ping()
 
 email_server = get_mail_server()
-
-SendedEmail = namedtuple("SendedEmail", ["send_time", "container_name", "email", "message", "result", "response"])
-Email = namedtuple("Email", ["address", "container_name", "failure_time", "healthcheck_response"])
 
 
 def clean_old_messages():
@@ -62,28 +63,26 @@ def send_email(email: Email):
     msg['From'] = config.email_from
     msg['To'] = email.address
 
-    response = None
     try:
         response = email_server.send_message(msg)
+        mail = SendedEmail(
+            send_time=datetime.now(timezone.utc),
+            container_name=email.container_name,
+            email=email,
+            message=msg,
+            result='SUCCESS',
+            response=response
+        )
+        sended_emails.append(mail)
+        log(f"<06b50cf0> Send mail success: {mail}")
     except smtplib.SMTPServerDisconnected:
         email_server.connect()
-    mail = SendedEmail(
-        send_time=datetime.now(timezone.utc),
-        container_name=email.container_name,
-        email=email,
-        message=msg,
-        result='SUCCESS',
-        response=response
-    )
-    sended_emails.append(mail)
-    log(f"<06b50cf0> Send mail success: {mail}")
 
 
-def notify_failure(container, time):
-    labels = container.attrs["Config"]["Labels"]
+def notify_failure(container: Container, time: datetime):
     failure_time = container.attrs["State"]["Health"]["Log"][-1]["End"]
     healthcheck_response = container.attrs["State"]["Health"]["Log"][-1]["Output"]
-    if healthcheck_response is str:
+    if type(healthcheck_response) is str:
         healthcheck_response = healthcheck_response.strip()
     latest_send = None
     container_sends = list(
@@ -92,13 +91,13 @@ def notify_failure(container, time):
     if len(container_sends) > 0:
         latest_send = container_sends[-1]
     send_timeout = config.default_send_timeout_min
-    if "failure_notify_timeout" in labels.keys():
-        send_timeout = int(labels['failure_notify_timeout'])
+    if "failure_notify_timeout" in container.labels.keys():
+        send_timeout = int(container.labels['failure_notify_timeout'])
     if not latest_send or (time - latest_send.send_time).seconds / 60 > send_timeout:
         default_address = config.default_receiver_address
         addresses = [default_address]
-        if 'failure_notify_email' in labels.keys():
-            addresses = labels['failure_notify_email'].split(',')
+        if 'failure_notify_email' in container.labels.keys():
+            addresses = container.labels['failure_notify_email'].split(',')
         for address in addresses:
             send_email(Email(
                 address=address,
@@ -108,21 +107,20 @@ def notify_failure(container, time):
             ))
 
 
-def restart_container(container):
+def restart_container(container: Container):
     log(f"<27db178e> Restaring container {container.name} with timeout {config.container_stop_timeout}")
     container.restart(timeout=config.container_stop_timeout)
 
 
-def process_container(container):
+def process_container(container: Container):
     log(f"<193643d5> Container {container.name} seems to be unhealthy")
     now = datetime.now(timezone.utc)
     failure_time = container.attrs["State"]["Health"]["Log"][-1]["End"]
-    labels = container.attrs["Config"]["Labels"]
     try:
         parsed_time = parser.isoparse(failure_time)
         if (now - parsed_time).seconds > config.container_debounce_time:
             restart_container(container)
-            if labels.get("failure_notify"):
+            if container.labels.get("failure_notify"):
                 notify_failure(container, now)
     except Exception as e:
         log(f"<22105c76> Error in container ({container.name}) processing: {e}", LogLevel.ERROR)

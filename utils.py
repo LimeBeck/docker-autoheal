@@ -1,6 +1,6 @@
-import distutils
 import os
 from datetime import datetime
+from distutils.util import strtobool
 from enum import Enum
 from textwrap import dedent
 
@@ -21,15 +21,17 @@ class MissingParameterException(Exception):
     pass
 
 
-def get_required_env(name):
+def get_required_env(name) -> str:
     param = os.getenv(name, None)
     if param is None:
         raise MissingParameterException(f"<8922e16> {name} is required parameter")
     return param
 
+
 def to_bool(value) -> bool:
-    if value is bool:
+    if type(value) is bool:
         return value
-    if value is str:
-        return distutils.util.strtobool(value)
-    raise ValueError("<c8f3984b> Value must by string or bool")
+    elif type(value) is str:
+        return strtobool(value)
+    else:
+        raise ValueError(f"<c8f3984b> Value must by string or bool, got {type(value)}")
