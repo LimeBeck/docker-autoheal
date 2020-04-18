@@ -56,6 +56,7 @@ def clean_old_messages():
 
 def send_email(email: Email):
     log(f"<64d4a81f> Send mail {email}")
+    email_server = get_mail_server()
     msg = EmailMessage()
     msg.set_content(
         f"Container '{email.container_name}' falling down at {email.failure_time} with healthcheck message: \n{email.healthcheck_response}")
