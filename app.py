@@ -42,7 +42,9 @@ DOCKER_BASE_URL={config.docker_base_url}
 docker_client = DockerClient(base_url=config.docker_base_url)
 docker_client.ping()
 
+# Test connection
 email_server = get_mail_server()
+email_server.close()
 
 
 def clean_old_messages():
@@ -78,6 +80,8 @@ def send_email(email: Email):
         log(f"<06b50cf0> Send mail success: {mail}")
     except smtplib.SMTPServerDisconnected:
         email_server.connect()
+    finally:
+        email_server.close()
 
 
 def notify_failure(container: Container, time: datetime):
