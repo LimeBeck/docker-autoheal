@@ -29,6 +29,8 @@ def get_required_env(name) -> str:
 
 
 def to_bool(value) -> bool:
+    if value is None:
+        return value
     if type(value) is bool:
         return value
     elif type(value) is str:
