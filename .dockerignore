@@ -1,3 +1,6 @@
 .gitignore
 LICENSE
 README.md
+venv
+/.idea/*
+/__pycache__

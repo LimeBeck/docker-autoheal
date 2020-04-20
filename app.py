@@ -1,6 +1,5 @@
 from time import sleep
 from datetime import datetime, timezone
-import smtplib
 from email.message import EmailMessage
 from collections import namedtuple
 from typing import List
@@ -19,32 +18,10 @@ Email = namedtuple("Email", ["address", "container_name", "failure_time", "healt
 unhealth_containers: List[Container] = []
 sended_emails: List[SendedEmail] = []
 
-log(f"""Start with configuration:
-DEFAULT_SEND_TIMEOUT_MIN={config.default_send_timeout_min}
-DEFAULT_RECEIVER_ADDRESS={config.default_receiver_address}
-EMAIL_FROM={config.email_from}
-EMAIL_HOST={config.email_host}
-EMAIL_PORT={config.email_port}
-EMAIL_LOGIN={config.email_login}
-EMAIL_PASSWORD={config.email_password}
-EMAIL_ENABLE_TLS={config.email_enable_tls}
-EMAIL_USE_SSL={config.email_use_ssl}
-AUTOHEAL_CONTAINER_LABEL={config.container_label}
-AUTOHEAL_DEFAULT_STOP_TIMEOUT={config.container_stop_timeout}
-AUTOHEAL_INTERVAL={config.container_interval}
-AUTOHEAL_START_PERIOD={config.container_start_period}
-AUTOHEAL_DEBOUNCE_TIME={config.container_debounce_time}
-CLEAN_PERIOD={config.clean_period}
-DOCKER_BASE_URL={config.docker_base_url}
-""".rstrip()
-    )
-
-docker_client = DockerClient(base_url=config.docker_base_url)
-docker_client.ping()
-
-# Test connection
-email_server = get_mail_server()
-email_server.close()
+# Test docker connection
+test_dc = DockerClient(base_url=config.docker_base_url)
+test_dc.ping()
+test_dc.close()
 
 
 def clean_old_messages():
@@ -58,7 +35,6 @@ def clean_old_messages():
 
 def send_email(email: Email):
     log(f"<64d4a81f> Send mail {email}")
-    email_server = get_mail_server()
     msg = EmailMessage()
     msg.set_content(
         f"Container '{email.container_name}' falling down at {email.failure_time} with healthcheck message: \n{email.healthcheck_response}")
@@ -67,21 +43,20 @@ def send_email(email: Email):
     msg['To'] = email.address
 
     try:
-        response = email_server.send_message(msg)
-        mail = SendedEmail(
-            send_time=datetime.now(timezone.utc),
-            container_name=email.container_name,
-            email=email,
-            message=msg,
-            result='SUCCESS',
-            response=response
-        )
-        sended_emails.append(mail)
-        log(f"<06b50cf0> Send mail success: {mail}")
-    except smtplib.SMTPServerDisconnected:
-        email_server.connect()
-    finally:
-        email_server.close()
+        with get_mail_server() as email_server:
+            response = email_server.send_message(msg)
+            mail = SendedEmail(
+                send_time=datetime.now(timezone.utc),
+                container_name=email.container_name,
+                email=email,
+                message=msg,
+                result='SUCCESS',
+                response=response
+            )
+            sended_emails.append(mail)
+            log(f"<06b50cf0> Send mail success: {mail}")
+    except Exception as e:
+        log(f"<e2a98def> Error while send email {email}: {e}", log_level=LogLevel.ERROR)
 
 
 def notify_failure(container: Container, time: datetime):
@@ -103,6 +78,7 @@ def notify_failure(container: Container, time: datetime):
         addresses = [default_address]
         if 'failure_notify_email' in container.labels.keys():
             addresses = container.labels['failure_notify_email'].split(',')
+        log(f"<ad25da5b> ({container.name}) Send container failure message to: {addresses}")
         for address in addresses:
             send_email(Email(
                 address=address,
@@ -110,6 +86,10 @@ def notify_failure(container: Container, time: datetime):
                 failure_time=failure_time,
                 healthcheck_response=healthcheck_response
             ))
+    else:
+        log(
+            f"<8133c8b6>  ({container.name}) Skip send container failure message because " +
+            f"of send timeout: {send_timeout} minutes")
 
 
 def restart_container(container: Container):
@@ -135,14 +115,14 @@ def start():
     sleep(config.container_start_period)
     while True:
         sleep(config.container_interval)
-        for container in docker_client.containers.list(
-                filters={"health": "unhealthy", "label": [f"{config.container_label}=true"]}):
-            process_container(container)
+        dc = DockerClient(base_url=config.docker_base_url)
+        try:
+            for container in dc.containers.list(
+                    filters={"health": "unhealthy", "label": [f"{config.container_label}=true"]}):
+                process_container(container)
+        finally:
+            dc.close()
 
 
 if __name__ == "__main__":
-    try:
-        start()
-    finally:
-        docker_client.close()
-        email_server.quit()
+    start()

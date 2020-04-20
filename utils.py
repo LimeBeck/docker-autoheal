@@ -6,14 +6,14 @@ from textwrap import dedent
 
 
 class LogLevel(Enum):
-    ERROR = "error"
-    INFO = "info"
-    DEBUG = "debug"
+    ERROR = "ERROR"
+    INFO = "INFO"
+    DEBUG = "DEBUG"
 
 
 def log(message: str, log_level: LogLevel = LogLevel.INFO):
     time = datetime.now().strftime("%Y-%m-%d-%H.%M.%S")
-    timed_message = f"{time} - {log_level} - {dedent(message)}"
+    timed_message = f"{time} - {log_level.name} - {dedent(message)}"
     print(timed_message)
 
 
