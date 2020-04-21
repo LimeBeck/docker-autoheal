@@ -1,0 +1,29 @@
+version: "2.2"
+services: 
+  python:
+    build: 
+      dockerfile: Dockerfile
+      context: test_container
+    labels: 
+      - autoheal=true
+      - failure_notify_timeout=40
+      - failure_notify=false
+      - failure_notify_email=${YOUR_MAIL}
+  autoheal:
+    build:
+      dockerfile: Dockerfile
+      context: ..
+    restart: always
+    environment:
+      - AUTOHEAL_INTERVAL=10
+      - AUTOHEAL_CONTAINER_LABEL=autoheal
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_LOGIN=${EMAIL_LOGIN}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_USE_SSL=${EMAIL_USE_SSL}
+      - EMAIL_ENABLE_TLS=${EMAIL_ENABLE_TLS}
+      - DEFAULT_RECEIVER_ADDRESS=${YOUR_MAIL}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

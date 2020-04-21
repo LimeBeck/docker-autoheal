@@ -8,7 +8,8 @@ it allow you to receive email notifications about
 
 Available on dockerhub:  `limebeck/docker-autoheal`
 
-Don't forget to add volume with docker socket. Usually like this: `-v /var/run/docker.sock:/var/run/docker.sock`
+Don't forget to add volume with docker socket. 
+Usually like this: `-v /var/run/docker.sock:/var/run/docker.sock`
 
 Add to your containers labels:
 
@@ -20,9 +21,9 @@ Add to your containers labels:
 
 ## Test email
 
-To send test email run `./test_mail.py your@mail.com`
+You can send test email with command `docker exec <container_name> python ./test_mail.py your@mail.com`
 
-## Configuration
+## Configuration via environment variables
 * DEFAULT_SEND_TIMEOUT_MIN - default send timeout for every container, minutes (default - 15)
 * DEFAULT_RECEIVER_ADDRESS - default notification receiver email
 * EMAIL_FROM - sender email
@@ -39,3 +40,14 @@ To send test email run `./test_mail.py your@mail.com`
 * AUTOHEAL_DEBOUNCE_TIME - debounce time (default - 0)
 * CLEAN_PERIOD - system property. Clean old email message log, minutes (default - 1440, one day)
 * DOCKER_BASE_URL - Docker base url (default - unix://var/run/docker.sock)
+
+## Build
+
+Clone repository and run `docker build -t limebeck/docker-autoheal:latest -f Dockerfile .`
+
+## Test
+
+Run test container and docker-autoheal service:
+1. go to test folder 
+2. copy `.env.example` to `.env` and change to your values
+3. run `docker-compose up`

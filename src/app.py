@@ -10,12 +10,11 @@ import dateutil.parser as parser
 from docker.models.containers import Container
 
 from send_mail import get_mail_server
-from utils import log, LogLevel
+from utils import log, LogLevel, to_bool
 import config
 
 SendedEmail = namedtuple("SendedEmail", ["send_time", "container_name", "email", "message", "result", "response"])
 Email = namedtuple("Email", ["address", "container_name", "failure_time", "healthcheck_response"])
-unhealth_containers: List[Container] = []
 sended_emails: List[SendedEmail] = []
 
 # Test docker connection
@@ -56,7 +55,7 @@ def send_email(email: Email):
             sended_emails.append(mail)
             log(f"<06b50cf0> Send mail success: {mail}")
     except Exception as e:
-        log(f"<e2a98def> Error while send email {email}: {e}", log_level=LogLevel.ERROR)
+        log(f"<e2a98def> ({email.container_name}) Error while send email {email}: {e}", log_level=LogLevel.ERROR)
 
 
 def notify_failure(container: Container, time: datetime):
@@ -93,20 +92,24 @@ def notify_failure(container: Container, time: datetime):
 
 
 def restart_container(container: Container):
-    log(f"<27db178e> Restaring container {container.name} with timeout {config.container_stop_timeout}")
+    log(f"<27db178e> ({container.name}) Restaring container with timeout {config.container_stop_timeout}")
     container.restart(timeout=config.container_stop_timeout)
 
 
 def process_container(container: Container):
-    log(f"<193643d5> Container {container.name} seems to be unhealthy")
+    log(f"<193643d5> ({container.name}) Container seems to be unhealthy")
     now = datetime.now(timezone.utc)
     failure_time = container.attrs["State"]["Health"]["Log"][-1]["End"]
     try:
         parsed_time = parser.isoparse(failure_time)
         if (now - parsed_time).seconds > config.container_debounce_time:
             restart_container(container)
-            if container.labels.get("failure_notify"):
+            if to_bool(container.labels.get("failure_notify")):
                 notify_failure(container, now)
+            else:
+                log(
+                    f"<8133c8b6> ({container.name}) Skip send container failure message because " +
+                    f"of 'failure_notify'={container.labels.get('failure_notify')}")
     except Exception as e:
         log(f"<22105c76> Error in container ({container.name}) processing: {e}", LogLevel.ERROR)
 
