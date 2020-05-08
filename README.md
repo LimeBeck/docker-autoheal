@@ -17,6 +17,7 @@ Add to your containers labels:
 - `failure_notify=true/false` - enable/disable notifications on container
 - `failure_notify_email=your@mail.com` - specify email for container
 - `failure_notify_timeout=n` - period between notifications, minutes
+- `failure_cmd=/command.sh` - any command, run in container just before restart
 
 
 ## Test email
