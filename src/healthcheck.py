@@ -7,3 +7,5 @@ import config
 docker_client = DockerClient(base_url=config.docker_base_url)
 docker_client.ping()
 docker_client.close()
+
+exit(0)

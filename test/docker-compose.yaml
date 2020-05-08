@@ -1,21 +1,22 @@
 version: "2.2"
 services: 
   python:
-    build: 
+    build:
       dockerfile: Dockerfile
       context: test_container
-    labels: 
+    labels:
       - autoheal=true
       - failure_notify_timeout=40
       - failure_notify=false
       - failure_notify_email=${YOUR_MAIL}
+      - failure_cmd=/failure.sh
   autoheal:
     build:
       dockerfile: Dockerfile
       context: ..
     restart: always
     environment:
-      - AUTOHEAL_INTERVAL=10
+      - AUTOHEAL_INTERVAL=1
       - AUTOHEAL_CONTAINER_LABEL=autoheal
       - EMAIL_FROM=${EMAIL_FROM}
       - EMAIL_PORT=${EMAIL_PORT}
