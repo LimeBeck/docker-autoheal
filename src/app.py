@@ -4,6 +4,7 @@ from docker import DockerClient
 
 import dateutil.parser as parser
 from docker.models.containers import Container
+from requests.adapters import ReadTimeout
 
 from execute_cmd import execute_cmd
 from send_mail import notify_failure
@@ -38,12 +39,19 @@ def process_container(container: Container):
 def start():
     sleep(config.container_start_period)
     while True:
-        sleep(config.container_interval)
-        dc = DockerClient(base_url=config.docker_base_url)
         try:
+            dc = DockerClient(
+                base_url=config.docker_base_url,
+                timeout=config.docker_timeout
+            )
             for container in dc.containers.list(
                     filters={"health": "unhealthy", "label": [f"{config.container_label}=true"]}):
                 process_container(container)
+            sleep(config.container_interval)
+        except ReadTimeout as e:
+            log(f"<7ba9d80d> Connection timed out. Restart containers processing", LogLevel.ERROR)
+        except Exception as e:
+            log(f"<4be316f> Error: {e}", LogLevel.ERROR)
         finally:
             dc.close()
 

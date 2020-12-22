@@ -41,6 +41,7 @@ You can send test email with command `docker exec <container_name> python ./test
 * AUTOHEAL_DEBOUNCE_TIME - debounce time (default - 0)
 * CLEAN_PERIOD - system property. Clean old email message log, minutes (default - 1440, one day)
 * DOCKER_BASE_URL - Docker base url (default - unix://var/run/docker.sock)
+* DOCKER_CONNECTION_TIMEOUT - Docker connection timeout in seconds (default - 60)
 
 ## Build
 
